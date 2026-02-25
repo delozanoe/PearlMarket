@@ -1,0 +1,16 @@
+{
+  "name": "pearlmarket",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run dev --workspace=server",
+    "dev": "npm run dev:server & npm run dev:client",
+    "build": "npm run build --workspace=client",
+    "start": "npm run start --workspace=server"
+  }
+}
