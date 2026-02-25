@@ -4,6 +4,7 @@ const amountAnomaly = require('./signals/amountAnomaly');
 const geoMismatch = require('./signals/geoMismatch');
 const emailVelocity = require('./signals/emailVelocity');
 const cardBinVelocity = require('./signals/cardBinVelocity');
+const knownPattern = require('./signals/knownPattern');
 
 const signals = [
   highRiskProduct,
@@ -12,6 +13,7 @@ const signals = [
   geoMismatch,
   emailVelocity,
   cardBinVelocity,
+  knownPattern,
 ];
 
 function getRiskLevel(score) {

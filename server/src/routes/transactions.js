@@ -4,6 +4,7 @@ const Transaction = require('../models/transaction');
 const { scoreTransaction } = require('../services/scoringEngine');
 const validateTransaction = require('../middleware/validateTransaction');
 const { NotFoundError } = require('../utils/errors');
+const { recordBlock } = require('../models/blockedEntity');
 
 // POST /api/transactions
 router.post('/', validateTransaction, (req, res, next) => {
@@ -62,6 +63,9 @@ router.patch('/:id/status', (req, res, next) => {
       });
     }
     const transaction = Transaction.updateStatus(req.db, req.params.id, status);
+    if (status === 'BLOCKED') {
+      recordBlock(req.db, transaction.customer_email, transaction.card_bin);
+    }
     console.log(`[Transaction] ${req.params.id} status changed to ${status}`);
     res.json(transaction);
   } catch (err) {

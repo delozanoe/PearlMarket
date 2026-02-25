@@ -20,9 +20,9 @@ describe('scoringEngine', () => {
     expect(result).toHaveProperty('score_breakdown');
   });
 
-  test('score_breakdown contains all 6 signals', () => {
+  test('score_breakdown contains all 7 signals', () => {
     const result = scoreTransaction(buildTransaction(), db);
-    expect(result.score_breakdown).toHaveLength(6);
+    expect(result.score_breakdown).toHaveLength(7);
     const signalNames = result.score_breakdown.map((s) => s.signal);
     expect(signalNames).toContain('high_risk_product');
     expect(signalNames).toContain('account_age');
@@ -30,6 +30,7 @@ describe('scoringEngine', () => {
     expect(signalNames).toContain('geo_mismatch');
     expect(signalNames).toContain('email_velocity');
     expect(signalNames).toContain('card_bin_velocity');
+    expect(signalNames).toContain('known_pattern');
   });
 
   test('each breakdown entry has required shape', () => {

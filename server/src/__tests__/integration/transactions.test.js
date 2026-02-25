@@ -71,7 +71,7 @@ describe('POST /api/transactions', () => {
       .post('/api/transactions')
       .send(buildTransaction());
 
-    expect(res.body.score_breakdown).toHaveLength(6);
+    expect(res.body.score_breakdown).toHaveLength(7);
   });
 });
 

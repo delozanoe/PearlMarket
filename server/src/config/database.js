@@ -30,6 +30,18 @@ function initializeSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at);
     CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
     CREATE INDEX IF NOT EXISTS idx_transactions_risk_level ON transactions(risk_level);
+
+    CREATE TABLE IF NOT EXISTS blocked_entities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL,
+      entity_value TEXT NOT NULL,
+      block_count INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(entity_type, entity_value)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_blocked_entities_lookup ON blocked_entities(entity_type, entity_value);
   `);
 }
 
