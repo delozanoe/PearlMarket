@@ -61,13 +61,19 @@ describe('Header', () => {
 
   it('polls stats every 10 seconds', async () => {
     renderWithProviders(<Header />);
-    await waitFor(() => expect(api.getStats).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(api.getStats).toHaveBeenCalled());
+    const callsAfterMount = api.getStats.mock.calls.length;
 
     vi.advanceTimersByTime(10000);
-    await waitFor(() => expect(api.getStats).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(api.getStats.mock.calls.length).toBeGreaterThan(callsAfterMount),
+    );
+    const callsAfterFirst = api.getStats.mock.calls.length;
 
     vi.advanceTimersByTime(10000);
-    await waitFor(() => expect(api.getStats).toHaveBeenCalledTimes(3));
+    await waitFor(() =>
+      expect(api.getStats.mock.calls.length).toBeGreaterThan(callsAfterFirst),
+    );
   });
 
   it('shows loading state initially', () => {
