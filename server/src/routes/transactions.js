@@ -5,6 +5,7 @@ const { scoreTransaction } = require('../services/scoringEngine');
 const validateTransaction = require('../middleware/validateTransaction');
 const { NotFoundError } = require('../utils/errors');
 const { recordBlock } = require('../models/blockedEntity');
+const { getSettings } = require('../models/settings');
 
 // POST /api/transactions
 router.post('/', validateTransaction, (req, res, next) => {
@@ -14,8 +15,21 @@ router.post('/', validateTransaction, (req, res, next) => {
       ...req.body,
       ...scoring,
     };
-    const transaction = Transaction.create(req.db, data);
-    console.log(`[Transaction] Created ${transaction.id} | score: ${transaction.fraud_score} | risk: ${transaction.risk_level}`);
+    let transaction = Transaction.create(req.db, data);
+
+    // Apply auto-actions based on settings
+    const settings = getSettings(req.db);
+    if (transaction.fraud_score <= settings.auto_approve_below) {
+      transaction = Transaction.updateStatus(req.db, transaction.id, 'APPROVED');
+      console.log(`[Transaction] Auto-approved ${transaction.id} (score ${transaction.fraud_score} <= ${settings.auto_approve_below})`);
+    } else if (transaction.fraud_score >= settings.auto_block_above) {
+      transaction = Transaction.updateStatus(req.db, transaction.id, 'BLOCKED');
+      recordBlock(req.db, transaction.customer_email, transaction.card_bin);
+      console.log(`[Transaction] Auto-blocked ${transaction.id} (score ${transaction.fraud_score} >= ${settings.auto_block_above})`);
+    } else {
+      console.log(`[Transaction] Created ${transaction.id} | score: ${transaction.fraud_score} | risk: ${transaction.risk_level}`);
+    }
+
     res.status(201).json(transaction);
   } catch (err) {
     next(err);

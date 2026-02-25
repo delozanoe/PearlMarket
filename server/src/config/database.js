@@ -42,6 +42,14 @@ function initializeSchema(db) {
     );
 
     CREATE INDEX IF NOT EXISTS idx_blocked_entities_lookup ON blocked_entities(entity_type, entity_value);
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
+    INSERT OR IGNORE INTO settings (key, value) VALUES ('auto_approve_below', '20');
+    INSERT OR IGNORE INTO settings (key, value) VALUES ('auto_block_above', '80');
   `);
 }
 
