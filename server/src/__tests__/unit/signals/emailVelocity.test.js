@@ -5,10 +5,15 @@ const { buildTransaction } = require('../../helpers/fixtures');
 describe('emailVelocity signal', () => {
   let db;
 
-  beforeEach(() => { db = createTestDb(); });
-  afterEach(() => { db.close(); });
+  beforeEach(() => {
+    db = createTestDb();
+  });
 
-  function insertRecent(email, minutesAgo = 1) {
+  afterEach(() => {
+    db.close();
+  });
+
+  function insertRecentTransaction(email, minutesAgo = 1) {
     const createdAt = new Date(Date.now() - minutesAgo * 60 * 1000).toISOString();
     db.prepare(`
       INSERT INTO transactions (id, amount, currency, customer_email,
@@ -18,29 +23,57 @@ describe('emailVelocity signal', () => {
     `).run(require('crypto').randomUUID(), email, createdAt, createdAt);
   }
 
-  test('no prior scores 0', () => {
-    expect(signal.calculate(buildTransaction(), db).score).toBe(0);
+  test('name is email_velocity', () => {
+    expect(signal.name).toBe('email_velocity');
   });
 
-  test('2 prior scores 15', () => {
-    insertRecent('customer@example.com', 3);
-    insertRecent('customer@example.com', 5);
-    expect(signal.calculate(buildTransaction(), db).score).toBe(15);
+  test('no prior transactions scores 0', () => {
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(0);
+    expect(result.severity).toBe('none');
   });
 
-  test('4 prior scores 25', () => {
-    for (let i = 0; i < 4; i++) insertRecent('customer@example.com', i + 1);
-    expect(signal.calculate(buildTransaction(), db).score).toBe(25);
+  test('1 prior transaction scores 0', () => {
+    insertRecentTransaction('customer@example.com', 5);
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(0);
   });
 
-  test('6 prior scores 30', () => {
-    for (let i = 0; i < 6; i++) insertRecent('customer@example.com', i + 1);
-    expect(signal.calculate(buildTransaction(), db).score).toBe(30);
+  test('2 prior transactions scores 15', () => {
+    insertRecentTransaction('customer@example.com', 3);
+    insertRecentTransaction('customer@example.com', 5);
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(15);
   });
 
-  test('old transactions not counted', () => {
-    insertRecent('customer@example.com', 15);
-    insertRecent('customer@example.com', 20);
-    expect(signal.calculate(buildTransaction(), db).score).toBe(0);
+  test('4 prior transactions scores 25', () => {
+    for (let i = 0; i < 4; i++) {
+      insertRecentTransaction('customer@example.com', i + 1);
+    }
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(25);
+    expect(result.severity).toBe('high');
+  });
+
+  test('6 prior transactions scores 30', () => {
+    for (let i = 0; i < 6; i++) {
+      insertRecentTransaction('customer@example.com', i + 1);
+    }
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(30);
+  });
+
+  test('old transactions (>10min) not counted', () => {
+    insertRecentTransaction('customer@example.com', 15);
+    insertRecentTransaction('customer@example.com', 20);
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(0);
+  });
+
+  test('different email not counted', () => {
+    insertRecentTransaction('other@example.com', 3);
+    insertRecentTransaction('other@example.com', 5);
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(0);
   });
 });

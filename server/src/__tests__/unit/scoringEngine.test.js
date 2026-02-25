@@ -45,11 +45,13 @@ describe('scoringEngine', () => {
   });
 
   test('scores are additive', () => {
+    // buildTransaction: Home Goods(0) + 365 days(0) + $100(0) + all US(0) + no velocity(0)
     const result = scoreTransaction(buildTransaction(), db);
     expect(result.fraud_score).toBe(0);
   });
 
   test('high-risk transaction scores high', () => {
+    // Gift Cards(20) + 0 days(20) + $2000(15) + all different geo(30) + no velocity(0)
     const result = scoreTransaction(buildHighRiskTransaction(), db);
     expect(result.fraud_score).toBe(85);
     expect(result.risk_level).toBe('HIGH');
@@ -62,7 +64,9 @@ describe('scoringEngine', () => {
   });
 
   test('fraud_score is capped at 100', () => {
+    // Create a scenario that would exceed 100 by adding velocity
     const email = 'spammer@test.com';
+    const now = new Date().toISOString();
     for (let i = 0; i < 7; i++) {
       const createdAt = new Date(Date.now() - (i + 1) * 60 * 1000).toISOString();
       db.prepare(`
@@ -73,6 +77,7 @@ describe('scoringEngine', () => {
       `).run(require('crypto').randomUUID(), email, createdAt, createdAt);
     }
 
+    // Gift Cards(20) + 0 days(20) + $2000(15) + all different(30) + email velocity(30) + card bin(15) = 130 -> capped at 100
     const txn = buildHighRiskTransaction({ customer_email: email, card_bin: '411111' });
     const result = scoreTransaction(txn, db);
     expect(result.fraud_score).toBeLessThanOrEqual(100);

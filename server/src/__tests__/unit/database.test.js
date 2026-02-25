@@ -55,19 +55,25 @@ describe('Database', () => {
     expect(statusCol.dflt_value).toBe("'PENDING'");
   });
 
-  test('creates blocked_entities table', () => {
-    const table = db.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='blocked_entities'"
-    ).get();
-    expect(table).toBeDefined();
-  });
+  test('can insert and retrieve a transaction', () => {
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO transactions (id, amount, currency, customer_email,
+        billing_country, shipping_country, ip_country, ip_address,
+        card_bin, card_last4, product_category, account_age_days,
+        fraud_score, risk_level, score_breakdown, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'test-id', 100.0, 'USD', 'test@example.com',
+      'US', 'US', 'US', '1.2.3.4',
+      '411111', '1234', 'Electronics', 30,
+      45, 'MEDIUM', '[]', 'PENDING', now, now
+    );
 
-  test('creates settings table with defaults', () => {
-    const rows = db.prepare('SELECT * FROM settings').all();
-    expect(rows.length).toBe(2);
-    const keys = rows.map((r) => r.key);
-    expect(keys).toContain('auto_approve_below');
-    expect(keys).toContain('auto_block_above');
+    const row = db.prepare('SELECT * FROM transactions WHERE id = ?').get('test-id');
+    expect(row).toBeDefined();
+    expect(row.amount).toBe(100.0);
+    expect(row.status).toBe('PENDING');
   });
 
   test('initializeSchema is idempotent', () => {

@@ -5,10 +5,15 @@ const { buildTransaction } = require('../../helpers/fixtures');
 describe('cardBinVelocity signal', () => {
   let db;
 
-  beforeEach(() => { db = createTestDb(); });
-  afterEach(() => { db.close(); });
+  beforeEach(() => {
+    db = createTestDb();
+  });
 
-  function insertRecent(cardBin, minutesAgo = 1) {
+  afterEach(() => {
+    db.close();
+  });
+
+  function insertRecentTransaction(cardBin, minutesAgo = 1) {
     const createdAt = new Date(Date.now() - minutesAgo * 60 * 1000).toISOString();
     db.prepare(`
       INSERT INTO transactions (id, amount, currency, customer_email,
@@ -18,24 +23,50 @@ describe('cardBinVelocity signal', () => {
     `).run(require('crypto').randomUUID(), cardBin, createdAt, createdAt);
   }
 
-  test('no prior scores 0', () => {
-    expect(signal.calculate(buildTransaction(), db).score).toBe(0);
+  test('name is card_bin_velocity', () => {
+    expect(signal.name).toBe('card_bin_velocity');
   });
 
-  test('2 prior scores 10', () => {
-    insertRecent('411111', 5);
-    insertRecent('411111', 10);
-    expect(signal.calculate(buildTransaction(), db).score).toBe(10);
+  test('no prior transactions scores 0', () => {
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(0);
+    expect(result.severity).toBe('none');
   });
 
-  test('4 prior scores 15', () => {
-    for (let i = 0; i < 4; i++) insertRecent('411111', i + 1);
-    expect(signal.calculate(buildTransaction(), db).score).toBe(15);
+  test('1 prior transaction scores 0', () => {
+    insertRecentTransaction('411111', 5);
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(0);
   });
 
-  test('old transactions not counted', () => {
-    insertRecent('411111', 35);
-    insertRecent('411111', 40);
-    expect(signal.calculate(buildTransaction(), db).score).toBe(0);
+  test('2 prior transactions scores 10', () => {
+    insertRecentTransaction('411111', 5);
+    insertRecentTransaction('411111', 10);
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(10);
+    expect(result.severity).toBe('medium');
+  });
+
+  test('4 prior transactions scores 15', () => {
+    for (let i = 0; i < 4; i++) {
+      insertRecentTransaction('411111', i + 1);
+    }
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(15);
+    expect(result.severity).toBe('high');
+  });
+
+  test('old transactions (>30min) not counted', () => {
+    insertRecentTransaction('411111', 35);
+    insertRecentTransaction('411111', 40);
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(0);
+  });
+
+  test('different BIN not counted', () => {
+    insertRecentTransaction('522222', 5);
+    insertRecentTransaction('522222', 10);
+    const result = signal.calculate(buildTransaction(), db);
+    expect(result.score).toBe(0);
   });
 });

@@ -69,6 +69,26 @@ describe('validateTransaction middleware', () => {
     }));
   });
 
+  test('rejects missing shipping_country', () => {
+    const txn = buildTransaction();
+    delete txn.shipping_country;
+    const { req, res, next } = createMockReqRes(txn);
+    validateTransaction(req, res, next);
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({
+      details: expect.arrayContaining(['shipping_country is required']),
+    }));
+  });
+
+  test('rejects missing ip_country', () => {
+    const txn = buildTransaction();
+    delete txn.ip_country;
+    const { req, res, next } = createMockReqRes(txn);
+    validateTransaction(req, res, next);
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({
+      details: expect.arrayContaining(['ip_country is required']),
+    }));
+  });
+
   test('rejects invalid card_bin (not 6 digits)', () => {
     const { req, res, next } = createMockReqRes(buildTransaction({ card_bin: '1234' }));
     validateTransaction(req, res, next);
