@@ -1,15 +1,10 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@import "tailwindcss";
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
+@theme {
+  --color-risk-low: #22C55E;
+  --color-risk-medium: #F59E0B;
+  --color-risk-high: #EF4444;
+  --color-status-pending: #6B7280;
+  --color-status-approved: #22C55E;
+  --color-status-blocked: #EF4444;
 }
