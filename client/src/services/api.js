@@ -23,16 +23,16 @@ export const api = {
     if (params.status) query.set('status', params.status);
     if (params.from) query.set('from', params.from);
     if (params.to) query.set('to', params.to);
-    if (params.limit) query.set('limit', params.limit);
-    if (params.offset) query.set('offset', params.offset);
+    if (params.limit != null) query.set('limit', params.limit);
+    if (params.offset != null) query.set('offset', params.offset);
     const qs = query.toString();
     return fetchJson(`/transactions${qs ? `?${qs}` : ''}`);
   },
   getTransaction(id) {
-    return fetchJson(`/transactions/${id}`);
+    return fetchJson(`/transactions/${encodeURIComponent(id)}`);
   },
   updateTransactionStatus(id, status) {
-    return fetchJson(`/transactions/${id}/status`, {
+    return fetchJson(`/transactions/${encodeURIComponent(id)}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     });

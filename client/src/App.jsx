@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useDashboard } from './context/DashboardContext';
 import { useFilters } from './hooks/useFilters';
 import { api } from './services/api';
@@ -9,6 +9,7 @@ import TransactionDetailPanel from './components/TransactionDetailPanel';
 
 const PAGE_SIZE = 20;
 const POLL_INTERVAL = 5000;
+const TOAST_AUTO_DISMISS_MS = 5000;
 
 function App() {
   const { state, selectTransaction, addToast, removeToast, optimisticUpdate, rollbackUpdate, confirmUpdate } = useDashboard();
@@ -19,8 +20,9 @@ function App() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const pollRef = useRef(null);
+  const fetchRef = useRef(null);
 
+  // Store latest fetch function in ref so polling doesn't reset on filter/page changes
   const fetchTransactions = useCallback(async () => {
     try {
       const params = {
@@ -44,22 +46,35 @@ function App() {
     }
   }, [page, filters, addToast]);
 
+  fetchRef.current = fetchTransactions;
+
   // Initial load + re-fetch on filter/page change
   useEffect(() => {
     setLoading(true);
     fetchTransactions();
   }, [fetchTransactions]);
 
-  // Poll for new transactions every 5 seconds
+  // Poll for new transactions - uses ref to avoid resetting interval on filter changes
   useEffect(() => {
-    pollRef.current = setInterval(fetchTransactions, POLL_INTERVAL);
-    return () => clearInterval(pollRef.current);
-  }, [fetchTransactions]);
+    const id = setInterval(() => fetchRef.current?.(), POLL_INTERVAL);
+    return () => clearInterval(id);
+  }, []);
+
+  // Auto-dismiss toasts after 5 seconds
+  useEffect(() => {
+    if (state.toasts.length === 0) return;
+    const timers = state.toasts.map((toast) =>
+      setTimeout(() => removeToast(toast.id), TOAST_AUTO_DISMISS_MS),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [state.toasts, removeToast]);
 
   const handleStatusChange = useCallback(async (txId, newStatus) => {
-    optimisticUpdate(txId, newStatus);
+    // Capture previous status for proper rollback
+    const prevTx = transactions.find((tx) => tx.id === txId);
+    const prevStatus = prevTx?.status || 'PENDING';
 
-    // Optimistic UI - update local state immediately
+    optimisticUpdate(txId, newStatus);
     setTransactions((prev) =>
       prev.map((tx) => (tx.id === txId ? { ...tx, status: newStatus } : tx)),
     );
@@ -71,36 +86,38 @@ function App() {
         message: `Transaction ${newStatus.toLowerCase()} successfully`,
         type: 'success',
       });
-      // Refresh to get updated data
-      fetchTransactions();
+      fetchRef.current?.();
     } catch (err) {
       rollbackUpdate(txId);
-      // Rollback local state
       setTransactions((prev) =>
-        prev.map((tx) => (tx.id === txId ? { ...tx, status: 'PENDING' } : tx)),
+        prev.map((tx) => (tx.id === txId ? { ...tx, status: prevStatus } : tx)),
       );
       const message = err.status === 409
         ? 'Transaction already actioned'
         : 'Failed to update transaction';
       addToast({ message, type: 'error' });
     }
-  }, [optimisticUpdate, confirmUpdate, rollbackUpdate, addToast, fetchTransactions]);
+  }, [transactions, optimisticUpdate, confirmUpdate, rollbackUpdate, addToast]);
 
   const handleFilterChange = useCallback((key, value) => {
-    setFilter(key, value);
+    // Toggle off if clicking the active filter
+    setFilter(key, filters[key] === value ? null : value);
     setPage(1);
-  }, [setFilter]);
+  }, [setFilter, filters]);
 
   const handleClearFilters = useCallback(() => {
     clearFilters();
     setPage(1);
   }, [clearFilters]);
 
-  // Apply optimistic updates to displayed transactions
-  const displayTransactions = transactions.map((tx) => {
-    const update = state.optimisticUpdates[tx.id];
-    return update ? { ...tx, status: update.status } : tx;
-  });
+  // Memoize display transactions to avoid unnecessary re-renders
+  const displayTransactions = useMemo(
+    () => transactions.map((tx) => {
+      const update = state.optimisticUpdates[tx.id];
+      return update ? { ...tx, status: update.status } : tx;
+    }),
+    [transactions, state.optimisticUpdates],
+  );
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 text-gray-900">
@@ -158,7 +175,11 @@ function App() {
 
       {/* Toast container */}
       {state.toasts.length > 0 && (
-        <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50">
+        <div
+          className="fixed bottom-4 right-4 flex flex-col gap-2 z-50"
+          role="status"
+          aria-live="polite"
+        >
           {state.toasts.map((toast) => (
             <div
               key={toast.id}
@@ -172,6 +193,7 @@ function App() {
               <button
                 onClick={() => removeToast(toast.id)}
                 className="text-white/70 hover:text-white"
+                aria-label="Dismiss notification"
               >
                 x
               </button>

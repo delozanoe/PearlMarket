@@ -58,7 +58,7 @@ describe('TransactionDetailPanel', () => {
     await waitFor(() => {
       expect(screen.getByText('suspicious@example.com')).toBeInTheDocument();
     });
-    expect(screen.getByText(/1,299\.99/)).toBeInTheDocument();
+    expect(screen.getAllByText(/1,299\.99/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Electronics')).toBeInTheDocument();
   });
 
@@ -199,7 +199,7 @@ describe('TransactionDetailPanel', () => {
       />,
     );
     await waitFor(() => {
-      expect(screen.getByText(/ID/)).toBeInTheDocument();
+      expect(screen.getAllByText(/ID/).length).toBeGreaterThanOrEqual(1);
     });
   });
 

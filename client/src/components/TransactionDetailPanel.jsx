@@ -109,12 +109,17 @@ export default function TransactionDetailPanel({ transactionId, onStatusChange, 
 
         {/* Transaction Info */}
         <div className="grid grid-cols-2 gap-4 text-sm">
+          <InfoRow label="Amount" value={`${transaction.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${transaction.currency}`} />
           <InfoRow label="Customer" value={transaction.customer_email} />
           <InfoRow label="Category" value={transaction.product_category} />
           <InfoRow label="Status" value={transaction.status} />
+          <InfoRow label="Billing Country" value={transaction.billing_country} />
+          <InfoRow label="Shipping Country" value={transaction.shipping_country} />
+          <InfoRow label="IP Country" value={transaction.ip_country} />
           <InfoRow label="Card" value={`${transaction.card_bin}...${transaction.card_last4}`} />
           <InfoRow label="IP Address" value={transaction.ip_address} />
           <InfoRow label="Account Age" value={`${transaction.account_age_days} days`} />
+          <InfoRow label="Created" value={new Date(transaction.created_at).toISOString().replace('T', ' ').slice(0, 19)} />
         </div>
 
         {/* Score Breakdown */}

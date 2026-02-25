@@ -41,7 +41,7 @@ export default function TransactionTable({
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200" aria-label="Transactions">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
@@ -64,8 +64,17 @@ export default function TransactionTable({
                 <tr
                   key={tx.id}
                   data-testid="transaction-row"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Transaction ${tx.customer_email}, ${tx.status}`}
                   className={`cursor-pointer hover:bg-gray-50 ${isHighRiskPending ? 'bg-red-50' : ''}`}
                   onClick={() => onSelectTransaction(tx.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectTransaction(tx.id);
+                    }
+                  }}
                 >
                   <td className="px-4 py-3 whitespace-nowrap font-mono text-sm text-gray-700">
                     {formatTimestamp(tx.created_at)}
