@@ -1,6 +1,6 @@
 const request = require('supertest');
 const { createTestApp } = require('../helpers/testApp');
-const { buildTransaction, buildHighRiskTransaction, buildLowRiskTransaction } = require('../helpers/fixtures');
+const { buildTransaction, buildHighRiskTransaction, buildMediumRiskTransaction, buildLowRiskTransaction } = require('../helpers/fixtures');
 
 describe('POST /api/transactions', () => {
   let app, db;
@@ -16,7 +16,7 @@ describe('POST /api/transactions', () => {
   test('creates a transaction and returns 201', async () => {
     const res = await request(app)
       .post('/api/transactions')
-      .send(buildTransaction());
+      .send(buildMediumRiskTransaction());
 
     expect(res.status).toBe(201);
     expect(res.body.id).toBeDefined();
@@ -93,6 +93,13 @@ describe('GET /api/transactions', () => {
     return res.body;
   }
 
+  async function createMediumRiskTransaction() {
+    const res = await request(app)
+      .post('/api/transactions')
+      .send(buildMediumRiskTransaction());
+    return res.body;
+  }
+
   test('returns empty list initially', async () => {
     const res = await request(app).get('/api/transactions');
     expect(res.status).toBe(200);
@@ -119,8 +126,9 @@ describe('GET /api/transactions', () => {
   });
 
   test('filters by status', async () => {
-    const txn = await createTransaction();
-    await createTransaction();
+    // Use medium-risk transactions that stay PENDING (not auto-actioned)
+    const txn = await createMediumRiskTransaction();
+    await createMediumRiskTransaction();
     await request(app)
       .patch(`/api/transactions/${txn.id}/status`)
       .send({ status: 'APPROVED' });
@@ -189,15 +197,15 @@ describe('PATCH /api/transactions/:id/status', () => {
     db.close();
   });
 
-  async function createTransaction() {
+  async function createPendingTransaction() {
     const res = await request(app)
       .post('/api/transactions')
-      .send(buildTransaction());
+      .send(buildMediumRiskTransaction());
     return res.body;
   }
 
   test('approves a pending transaction', async () => {
-    const txn = await createTransaction();
+    const txn = await createPendingTransaction();
     const res = await request(app)
       .patch(`/api/transactions/${txn.id}/status`)
       .send({ status: 'APPROVED' });
@@ -207,7 +215,7 @@ describe('PATCH /api/transactions/:id/status', () => {
   });
 
   test('blocks a pending transaction', async () => {
-    const txn = await createTransaction();
+    const txn = await createPendingTransaction();
     const res = await request(app)
       .patch(`/api/transactions/${txn.id}/status`)
       .send({ status: 'BLOCKED' });
@@ -217,7 +225,7 @@ describe('PATCH /api/transactions/:id/status', () => {
   });
 
   test('returns 400 for invalid status', async () => {
-    const txn = await createTransaction();
+    const txn = await createPendingTransaction();
     const res = await request(app)
       .patch(`/api/transactions/${txn.id}/status`)
       .send({ status: 'INVALID' });
@@ -235,7 +243,7 @@ describe('PATCH /api/transactions/:id/status', () => {
   });
 
   test('returns 409 for already-actioned transaction', async () => {
-    const txn = await createTransaction();
+    const txn = await createPendingTransaction();
     await request(app)
       .patch(`/api/transactions/${txn.id}/status`)
       .send({ status: 'APPROVED' });

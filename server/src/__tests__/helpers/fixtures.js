@@ -29,6 +29,20 @@ function buildHighRiskTransaction(overrides = {}) {
   });
 }
 
+function buildMediumRiskTransaction(overrides = {}) {
+  return buildTransaction({
+    amount: 500.00,
+    currency: 'USD',
+    customer_email: 'customer@example.com',
+    billing_country: 'US',
+    shipping_country: 'SG',
+    ip_country: 'US',
+    product_category: 'Electronics',
+    account_age_days: 60,
+    ...overrides,
+  });
+}
+
 function buildLowRiskTransaction(overrides = {}) {
   return buildTransaction({
     amount: 25.00,
@@ -43,4 +57,4 @@ function buildLowRiskTransaction(overrides = {}) {
   });
 }
 
-module.exports = { buildTransaction, buildHighRiskTransaction, buildLowRiskTransaction };
+module.exports = { buildTransaction, buildHighRiskTransaction, buildMediumRiskTransaction, buildLowRiskTransaction };

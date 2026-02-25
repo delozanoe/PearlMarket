@@ -1,6 +1,6 @@
 const request = require('supertest');
 const { createTestApp } = require('../helpers/testApp');
-const { buildTransaction, buildHighRiskTransaction } = require('../helpers/fixtures');
+const { buildTransaction, buildHighRiskTransaction, buildMediumRiskTransaction } = require('../helpers/fixtures');
 
 describe('GET /api/stats', () => {
   let app, db;
@@ -20,6 +20,13 @@ describe('GET /api/stats', () => {
     return res.body;
   }
 
+  async function createMediumRiskTransaction() {
+    const res = await request(app)
+      .post('/api/transactions')
+      .send(buildMediumRiskTransaction());
+    return res.body;
+  }
+
   test('returns zeros when no transactions', async () => {
     const res = await request(app).get('/api/stats');
     expect(res.status).toBe(200);
@@ -34,9 +41,10 @@ describe('GET /api/stats', () => {
   });
 
   test('counts transactions by status', async () => {
-    const t1 = await createTransaction();
-    const t2 = await createTransaction();
-    await createTransaction();
+    // Use medium-risk transactions that stay PENDING (not auto-actioned)
+    const t1 = await createMediumRiskTransaction();
+    const t2 = await createMediumRiskTransaction();
+    await createMediumRiskTransaction();
 
     await request(app)
       .patch(`/api/transactions/${t1.id}/status`)
