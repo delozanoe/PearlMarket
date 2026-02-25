@@ -88,10 +88,11 @@ describe('App', () => {
   });
 
   it('displays toast notifications', async () => {
-    api.getTransactions.mockRejectedValueOnce(new Error('Network error'));
+    vi.useRealTimers();
+    api.getTransactions.mockRejectedValue(new Error('Network error'));
     renderWithProviders(<App />);
     await waitFor(() => {
-      expect(screen.getByText(/error|failed/i)).toBeInTheDocument();
+      expect(screen.getByText(/failed/i)).toBeInTheDocument();
     });
   });
 });
